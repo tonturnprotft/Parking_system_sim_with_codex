@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page_title }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', path='css/styles.css') }}">
+</head>
+<body>
+  <div class="dashboard-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Embedded Systems Mini Project</p>
+        <h1>{{ page_title }}</h1>
+        <p class="hero-copy">
+          Live obstacle and impact visualization for an ESP32-based vehicle safety prototype.
+        </p>
+      </div>
+      <div class="hero-meta">
+        <div class="hero-chip" id="feedModeChip">Connecting</div>
+        <div class="hero-chip" id="modeChip">Mock Mode</div>
+        <div class="hero-timestamp">
+          <span class="label">Last Update</span>
+          <strong id="lastUpdateText">Waiting for data...</strong>
+        </div>
+      </div>
+    </header>
+
+    <main class="dashboard-grid">
+      <section class="panel vehicle-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="panel-kicker">Vehicle View</p>
+            <h2>Parking and Obstacle Monitor</h2>
+          </div>
+          <div class="near-pill" id="nearPill">Near: No Data</div>
+        </div>
+
+        <div class="vehicle-stage">
+          <div class="sensor-label sensor-label-front">
+            <span>Front Sensor (S1)</span>
+            <strong id="frontSensorText">No Data</strong>
+          </div>
+
+          <div class="radar radar-front" id="frontRadar" data-zone="no_data">
+            <div class="wave wave-1"></div>
+            <div class="wave wave-2"></div>
+            <div class="wave wave-3"></div>
+          </div>
+
+          <div class="car-shell">
+            <div class="vehicle-alert-window" id="vehicleAlertWindow" hidden>
+              <span class="vehicle-alert-kicker">Emergency Event</span>
+              <strong class="vehicle-alert-title" id="vehicleAlertTitle">ACCIDENT ALERT</strong>
+              <span class="vehicle-alert-reason" id="vehicleAlertReason">Alert state active</span>
+            </div>
+            <div class="car-shadow"></div>
+            <div class="car-body">
+              <div class="car-window car-window-front"></div>
+              <div class="car-cabin"></div>
+              <div class="car-window car-window-rear"></div>
+              <div class="wheel wheel-left wheel-front"></div>
+              <div class="wheel wheel-right wheel-front"></div>
+              <div class="wheel wheel-left wheel-rear"></div>
+              <div class="wheel wheel-right wheel-rear"></div>
+              <div class="bumper bumper-front"></div>
+              <div class="bumper bumper-rear"></div>
+            </div>
+            <div class="car-caption">
+              <strong>ESP32 Safety Demo</strong>
+              <span id="alertBanner" data-state="off">Alert: OFF</span>
+            </div>
+          </div>
+
+          <div class="radar radar-rear" id="rearRadar" data-zone="no_data">
+            <div class="wave wave-1"></div>
+            <div class="wave wave-2"></div>
+            <div class="wave wave-3"></div>
+          </div>
+
+          <div class="sensor-label sensor-label-rear">
+            <span>Rear Sensor (S2)</span>
+            <strong id="rearSensorText">No Data</strong>
+          </div>
+        </div>
+
+        <div class="legend-row">
+          <div class="legend-item safe">Safe</div>
+          <div class="legend-item caution">Caution</div>
+          <div class="legend-item warning">Warning</div>
+          <div class="legend-item danger">Danger</div>
+          <div class="legend-item accident">Accident</div>
+        </div>
+
+        <section class="chart-panel">
+          <div class="panel-heading compact">
+            <div>
+              <p class="panel-kicker">Trend View</p>
+              <h2>Recent Sensor History</h2>
+            </div>
+          </div>
+          <div class="chart-grid">
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <span class="chart-label">VL53L0X</span>
+                <h3>Distance Sensors</h3>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="vl53Chart" aria-label="VL53L0X distance chart"></canvas>
+              </div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-card-header">
+                <span class="chart-label">ADXL</span>
+                <h3>Acceleration Sensors</h3>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="adxlChart" aria-label="ADXL acceleration chart"></canvas>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <aside class="side-panel">
+        <section class="panel">
+          <div class="panel-heading compact">
+            <div>
+              <p class="panel-kicker">Live Status</p>
+              <h2>Telemetry Cards</h2>
+            </div>
+          </div>
+
+          <div class="status-grid">
+            <article class="status-card" id="cardFront" data-tone="neutral">
+              <span class="card-label">Front Sensor</span>
+              <strong class="card-value" id="cardFrontValue">No Data</strong>
+              <span class="card-meta" id="cardFrontMeta">S1 inactive</span>
+            </article>
+
+            <article class="status-card" id="cardRear" data-tone="neutral">
+              <span class="card-label">Rear Sensor</span>
+              <strong class="card-value" id="cardRearValue">No Data</strong>
+              <span class="card-meta" id="cardRearMeta">S2 inactive</span>
+            </article>
+
+            <article class="status-card" id="cardAx" data-tone="neutral">
+              <span class="card-label">AX</span>
+              <strong class="card-value" id="cardAxValue">No Data</strong>
+              <span class="card-meta">Acceleration value</span>
+            </article>
+
+            <article class="status-card" id="cardDa" data-tone="neutral">
+              <span class="card-label">dA</span>
+              <strong class="card-value" id="cardDaValue">No Data</strong>
+              <span class="card-meta" id="cardDaMeta">Delta acceleration</span>
+            </article>
+
+            <article class="status-card" id="cardBuzz" data-tone="neutral">
+              <span class="card-label">Buzz</span>
+              <strong class="card-value" id="cardBuzzValue">OFF</strong>
+              <span class="card-meta">Buzzer mode</span>
+            </article>
+
+            <article class="status-card" id="cardRgb" data-tone="neutral">
+              <span class="card-label">RGB</span>
+              <strong class="card-value" id="cardRgbValue">OFF</strong>
+              <span class="card-meta">LED state</span>
+            </article>
+
+            <article class="status-card" id="cardAlert" data-tone="neutral">
+              <span class="card-label">Alert</span>
+              <strong class="card-value" id="cardAlertValue">OFF</strong>
+              <span class="card-meta" id="cardAlertMeta">No accident condition</span>
+            </article>
+          </div>
+        </section>
+
+        <section class="panel logs-panel">
+          <div class="panel-heading compact">
+            <div>
+              <p class="panel-kicker">Serial Feed</p>
+              <h2>Incoming Logs</h2>
+            </div>
+          </div>
+          <ul class="log-list" id="logList"></ul>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script id="dashboard-config" type="application/json">{{ config_json | safe }}</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="{{ url_for('static', path='js/app.js') }}"></script>
+</body>
+</html>
