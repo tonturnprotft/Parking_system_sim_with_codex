@@ -30,6 +30,14 @@ python -m uvicorn app.main:app --reload
 
 Open `http://127.0.0.1:8000`.
 
+## GitHub Pages Demo
+
+This repository also includes a static demo entry page at `/index.html` for GitHub Pages.
+It reuses the same dashboard UI but plays bundled mock readings from `app/static/data/demo-data.json`.
+
+The GitHub Pages site is deployed by [`.github/workflows/deploy-pages.yml`](/Users/tree/embedded2/.github/workflows/deploy-pages.yml).
+Use GitHub Pages for the demo UI only; the FastAPI backend, websocket feed, and serial port ingestion still need to run locally or on a server that supports Python processes.
+
 The dashboard reads from serial port `/dev/tty.usbserial-55980077511` at `115200` baud by default.
 Close any other serial monitor that is already using that port before starting the app.
 

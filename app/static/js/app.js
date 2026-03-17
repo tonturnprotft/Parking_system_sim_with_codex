@@ -21,6 +21,9 @@ const toneByZone = {
 const state = {
   latestTimestamp: null,
   pollTimer: null,
+  demoTimer: null,
+  demoPayload: null,
+  demoCursor: 0,
   charts: {
     vl53: null,
     adxl: null,
@@ -68,7 +71,13 @@ const ui = {
   },
 };
 
-ui.modeChip.textContent = config.mock_mode ? "Mock Mode" : "Live Mode";
+function isStaticDemo() {
+  return config.data_mode === "static-demo";
+}
+
+ui.modeChip.textContent = isStaticDemo()
+  ? "GitHub Demo"
+  : config.mock_mode ? "Mock Mode" : "Live Mode";
 
 function formatDistance(value) {
   if (value === null || value === undefined) {
@@ -100,6 +109,20 @@ function formatTimestamp(value) {
 function setConnectionMode(label) {
   state.connectionMode = label;
   ui.feedModeChip.textContent = label;
+}
+
+async function loadDemoPayload() {
+  if (state.demoPayload) {
+    return state.demoPayload;
+  }
+
+  const response = await fetch(config.demo_data_path || "app/static/data/demo-data.json");
+  if (!response.ok) {
+    throw new Error("Unable to load demo data.");
+  }
+
+  state.demoPayload = await response.json();
+  return state.demoPayload;
 }
 
 function toneFromReadingZone(zone) {
@@ -395,6 +418,25 @@ function renderReading(reading, options = {}) {
 }
 
 async function fetchHistory() {
+  if (isStaticDemo()) {
+    const payload = await loadDemoPayload();
+    const seedCount = Math.max(1, Math.min(config.demo_seed_count || payload.items.length, payload.items.length));
+    const seedItems = payload.items.slice(0, seedCount);
+
+    rebuildLogs(seedItems);
+    rebuildCharts(seedItems);
+
+    if (seedItems.length > 0) {
+      renderReading(seedItems[seedItems.length - 1], {
+        appendLiveLog: false,
+        updateChart: false,
+      });
+    }
+
+    state.demoCursor = seedItems.length % payload.items.length;
+    return;
+  }
+
   const response = await fetch(`/history?limit=${config.default_history_points}`);
   const payload = await response.json();
 
@@ -410,6 +452,23 @@ async function fetchHistory() {
 }
 
 async function fetchLatest() {
+  if (isStaticDemo()) {
+    const payload = await loadDemoPayload();
+    if (!payload.items.length) {
+      return;
+    }
+
+    const reading = payload.items[state.demoCursor % payload.items.length];
+    state.demoCursor += 1;
+
+    if (reading.timestamp === state.latestTimestamp) {
+      return;
+    }
+
+    renderReading(reading);
+    return;
+  }
+
   const response = await fetch("/latest");
   const payload = await response.json();
   if (!payload.data) {
@@ -434,6 +493,20 @@ function startPolling() {
       setConnectionMode("Polling Retry");
     });
   }, config.poll_interval_ms);
+}
+
+function startDemoPlayback() {
+  if (state.demoTimer) {
+    return;
+  }
+
+  const intervalMs = Math.max(250, Math.round((config.mock_interval_seconds || 0.5) * 1000));
+  setConnectionMode("Demo Loop");
+  state.demoTimer = window.setInterval(() => {
+    fetchLatest().catch(() => {
+      setConnectionMode("Demo Offline");
+    });
+  }, intervalMs);
 }
 
 function startWebSocket() {
@@ -470,9 +543,16 @@ function startWebSocket() {
 async function initDashboard() {
   try {
     await fetchHistory();
-    await fetchLatest();
+    if (!isStaticDemo()) {
+      await fetchLatest();
+    }
   } catch (error) {
     setConnectionMode("Offline");
+    return;
+  }
+
+  if (isStaticDemo()) {
+    startDemoPlayback();
     return;
   }
 
